@@ -1,0 +1,39 @@
+# Copiar este archivo a .github/workflows/notify-preview.yml DENTRO de
+# cada repo con web desplegada que quieras previsualizar en vivo
+# (ing-agroindustrial, asistencia-esperanza-baja) — no va en
+# repo-preview-service.
+#
+# Qué hace: en cada push a la rama principal, le avisa a
+# repo-preview-service para que dispare .github/workflows/screenshots.yml
+# y recapture ese proyecto. Sin esto, las capturas igual se actualizan
+# solas cada 6 horas (el cron de respaldo en ese workflow), solo que no
+# al instante.
+#
+# Configuración de una sola vez:
+#   1. Crear un GitHub PAT (fine-grained) con permiso "Contents: write"
+#      y "Read access to metadata" sobre repo-preview-service.
+#      Settings → Developer settings → Personal access tokens.
+#   2. En ESTE repo (el del proyecto con web, no repo-preview-service):
+#      Settings → Secrets and variables → Actions → New repository secret
+#      Nombre: PREVIEW_DISPATCH_TOKEN
+#      Valor: el PAT del paso 1.
+#   3. Cambiar `slug:` abajo por el slug real de este proyecto en
+#      configs/projects.yaml (por ejemplo "ing-agroindustrial").
+
+name: Notify preview service
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avisar a repo-preview-service
+        env:
+          GH_TOKEN: ${{ secrets.PREVIEW_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/RenatoMart/repo-preview-service/dispatches \
+            -f event_type=preview-refresh \
+            -f "client_payload[slug]=ing-agroindustrial"

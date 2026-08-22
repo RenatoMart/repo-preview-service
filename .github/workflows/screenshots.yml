@@ -1,0 +1,73 @@
+# Genera las capturas de pantalla de los proyectos con web desplegada,
+# usando cmd/shooter con chromedp. Corre en la máquina que GitHub presta
+# gratis (para repos públicos, minutos ilimitados) y que ya trae Chrome
+# instalado — así el servidor en vivo (cmd/server) nunca necesita abrir
+# un navegador ni pagarse un hosting siempre encendido para eso.
+#
+# El PNG resultante se commitea a data/screenshots/{slug}.png, y desde
+# ahí jsDelivr lo sirve gratis como CDN (ver internal/preview/committed.go).
+#
+# Se dispara de dos formas:
+#   - repository_dispatch (tipo "preview-refresh"): un push a
+#     ing-agroindustrial o asistencia-esperanza-baja lo lanza casi al
+#     instante (ver el workflow de ejemplo para esos repos en
+#     docs/notify-preview.example.yml).
+#   - schedule: red de seguridad cada 6 horas, por si algún aviso se
+#     pierde. cmd/shooter compara pushed_at y no vuelve a capturar si no
+#     hay nada nuevo, así que estas corridas periódicas casi siempre no
+#     hacen nada.
+name: Screenshots
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [preview-refresh]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: false
+
+jobs:
+  shoot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+
+      # Solo cuando nos avisó un push real: le da tiempo a Vercel a
+      # terminar el deploy, para no capturar la versión anterior del
+      # sitio. La corrida periódica de respaldo no necesita esperar.
+      - name: Esperar a que termine el deploy
+        if: github.event_name == 'repository_dispatch'
+        run: sleep 90
+
+      - name: Capturar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          slug="${{ github.event.client_payload.slug }}"
+          if [ -n "$slug" ]; then
+            go run ./cmd/shooter -slug "$slug"
+          else
+            go run ./cmd/shooter
+          fi
+
+      - name: Commitear capturas nuevas
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/screenshots
+          if git diff --cached --quiet; then
+            echo "sin cambios en las capturas"
+          else
+            git commit -m "chore: actualizar capturas de previsualización"
+            git push
+          fi

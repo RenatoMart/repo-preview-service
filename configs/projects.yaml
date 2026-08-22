@@ -1,0 +1,99 @@
+# Catálogo de proyectos servidos por repo-preview-service.
+#
+# Esta lista es la fuente de verdad para el backend: define qué repos son
+# consultables y qué URL se le permite capturar a chromedp (evita SSRF, ver
+# internal/catalog/catalog.go). El frontend (personal-page) deja de mantener
+# esta información en src/data/projects.ts y la consume vía GET /api/v1/projects.
+#
+# slug:        identificador corto usado en la URL de la API. Único.
+# repo:        "owner/name" del repositorio en GitHub.
+# title:       título mostrado en la tarjeta.
+# category:    agrupación usada por el frontend (Todos/Trabajos Web/...).
+# live:        URL desplegada, o cadena vacía si no existe (apps de escritorio/móvil).
+# accent:      color de acento de la tarjeta generada.
+# tags:        tecnologías mostradas como píldoras.
+# description: texto corto mostrado bajo el título.
+
+- slug: ing-agroindustrial
+  repo: RenatoMart/ing-agroindustrial
+  title: "Ing. Agroindustrial — Web Institucional"
+  category: "Trabajos Web"
+  live: "https://ingagroindustrial.vercel.app/"
+  accent: "#2563eb"
+  tags: ["React 18", "TypeScript", "Vite", "TailwindCSS", "Framer Motion", "Vercel"]
+  description: >-
+    Sitio web institucional reutilizable para escuelas universitarias de la UNT
+    (coordinado por la Oficina de Calidad). Arquitectura de plantilla: código
+    compartido + perfil por escuela.
+
+- slug: camara-pro-ang
+  repo: RenatoMart/camara-pro-ang
+  title: "Cámara ProAng — App Móvil"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#7c3aed"
+  tags: ["React Native", "Machine Learning", "Expo", "Skia", "VisionCamera"]
+  description: >-
+    Cámara inteligente que procesa la imagen frame a frame usando un modelo
+    entrenado para autoseleccionar la mejor guía de composición visual, con
+    un "Modo Fantasma" para fusiones de doble exposición usando Skia.
+
+- slug: asistencia-esperanza-baja
+  repo: RenatoMart/asistencia-esperanza-baja
+  title: "Sistema de Asistencia — Esperanza Baja"
+  category: "Trabajos Web"
+  live: "https://asistencia-esperanza-baja.vercel.app"
+  accent: "#2563eb"
+  tags: ["Next.js", "TypeScript", "Tailwind", "Vercel"]
+  description: >-
+    Plataforma web de gestión de asistencia para una comunidad. Desarrollada
+    con Next.js y TypeScript, desplegada en Vercel como herramienta de
+    seguimiento para voluntarios.
+
+- slug: sistema-almacen
+  repo: RenatoMart/SistemaAlmacen
+  title: "Sistema de Almacén"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#0891b2"
+  tags: ["Python", "GUI", "JSON", "Inventario"]
+  description: >-
+    Aplicación de escritorio (GUI) en Python para gestión de inventario.
+    Registra entradas y salidas en archivos JSON, calcula el inventario
+    dinámicamente y genera reportes.
+
+- slug: posture-corrector
+  repo: RenatoMart/posture-corrector
+  title: "Posture Corrector — IA Postural"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#7c3aed"
+  tags: ["Python", "MediaPipe", "ML", "Computer Vision"]
+  description: >-
+    Sistema de corrección postural en tiempo real con Python y MediaPipe.
+    Combina análisis RULA con un modelo de ML entrenado con 6 sesiones para
+    detectar encorvamiento sostenido y disparar alertas de postura.
+
+- slug: seditalks
+  repo: RenatoMart/Seditalks
+  title: "Sistema de Asistencia QR — SEDITALKS"
+  category: "Voluntariado"
+  live: ""
+  accent: "#2563eb"
+  tags: ["Python", "OpenCV", "Tkinter", "Google Sheets API"]
+  description: >-
+    Sistema de control de asistencia mediante códigos QR desarrollado para
+    eventos de SEDIPRO. Integración a Google Sheets en tiempo real, modo
+    automático de escaneo y registro manual.
+
+- slug: certificados-semiautomaticos
+  repo: RenatoMart/certificados-semiautomaticos
+  title: "Generador de Certificados Semiautomático"
+  category: "Voluntariado"
+  live: ""
+  accent: "#7c3aed"
+  tags: ["Python", "Tkinter", "Pandas", "Pillow"]
+  description: >-
+    Sistema de escritorio para generar certificados automáticamente a partir
+    de archivos Excel. Interfaz gráfica para carga de datos, previsualización
+    de diseños y exportación por lotes.

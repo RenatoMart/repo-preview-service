@@ -1,0 +1,26 @@
+# Caché del servidor en vivo (internal/store): se regenera sola en cada
+# arranque, no tiene sentido versionarla.
+/data/index.json
+/data/blobs/
+
+# data/screenshots/ SÍ se versiona a propósito: es lo que cmd/shooter
+# genera en GitHub Actions y jsDelivr sirve directo desde este repo (ver
+# internal/preview/committed.go). No la agregues aquí.
+
+# Go
+*.test
+*.out
+
+# Entorno local
+.env
+
+# IDE
+.idea/
+
+# Instrucciones para Claude Code: son para trabajar en el repo, no para
+# publicar.
+CLAUDE.md
+
+# Notas internas para configurar personal-page: son para pegar allá, no
+# para publicar en este repo.
+instruccion-next.md
