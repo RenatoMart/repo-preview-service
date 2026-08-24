@@ -46,6 +46,24 @@ curl localhost:8080/api/v1/projects/posture-corrector/preview -o preview.svg
 Sin `GITHUB_TOKEN`, la API de GitHub limita a 60 peticiones/hora (igual
 alcanza para probar). Con un PAT sin scopes en `.env`, sube a 5000/hora.
 
+## Troubleshooting local
+
+**"Ya subí una captura nueva pero el servidor sigue devolviendo la
+tarjeta SVG":** el refresco automático (`internal/refresh/refresher.go`)
+solo vuelve a resolver la cascada de un proyecto cuando `pushed_at` del
+repo *de ese proyecto* cambió. Commitear una captura nueva a
+`data/screenshots/` no toca el `pushed_at` de `ing-agroindustrial` ni de
+ningún otro proyecto, así que si ya había una entrada cacheada en
+`DATA_DIR/index.json`, se queda con el resultado viejo indefinidamente.
+Para forzar que un slug se vuelva a resolver: borrar su entrada de
+`index.json` (o el archivo entero) y reiniciar el servidor.
+
+**"Reinicié el servidor pero sigue respondiendo lo mismo, o falla con
+`address already in use`":** `go run` deja vivo un proceso hijo
+(el binario ya compilado) aunque mates el proceso de `go run`. Buscar
+quién tiene el puerto real con `lsof -i :8080` y matar ese PID, no el de
+`go run`.
+
 ## Tomar capturas manualmente
 
 ```bash
