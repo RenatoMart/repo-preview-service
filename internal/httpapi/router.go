@@ -35,7 +35,11 @@ func NewRouter(cfg config.Config, cat *catalog.Catalog, st *store.Store, ref *re
 		MaxAge:         300,
 	}))
 
+	// UptimeRobot y monitores similares chequean con HEAD, no GET, para
+	// ahorrar ancho de banda — sin este registro, chi responde 405 (solo
+	// enruta el método exacto que se registró).
 	r.Get("/healthz", healthHandler(cat))
+	r.Head("/healthz", healthHandler(cat))
 
 	projects := NewProjectsHandler(cat, st)
 	previewH := NewPreviewHandler(cat, st)
