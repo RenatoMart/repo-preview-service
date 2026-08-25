@@ -60,19 +60,11 @@ type tagPill struct {
 	Width float64
 }
 
-type descLine struct {
-	Text string
-	Y    float64
-}
-
 type cardData struct {
 	Width, Height int
 	Accent        string
-	Category      string
 	Title         string
-	TitleSize     int
-	DescLines     []descLine
-	Tags          []tagPill
+	Description   string
 	Langs         []langSlice
 	BarX, BarY    float64
 	BarWidth      float64
@@ -87,19 +79,15 @@ func renderCard(p catalog.Project, m meta.Metadata) (string, error) {
 		accent = "#2563eb"
 	}
 
-	title := truncate(p.Title, 60)
 	data := cardData{
-		Width:     cardWidth,
-		Height:    cardHeight,
-		Accent:    accent,
-		Category:  p.Category,
-		Title:     title,
-		TitleSize: titleFontSize(title),
-		DescLines: layoutDescription(p.Description, 220, 34),
-		Tags:      layoutTags(p.Tags, 64, float64(cardWidth)-128),
-		BarX:      64,
-		BarY:      520,
-		BarWidth:  float64(cardWidth) - 128,
+		Width:       cardWidth,
+		Height:      cardHeight,
+		Accent:      accent,
+		Title:       truncate(p.Title, 60),
+		Description: p.Description,
+		BarX:        64,
+		BarY:        300,
+		BarWidth:    float64(cardWidth) - 128,
 	}
 	data.LegendY = data.BarY + 40
 	data.Langs = layoutLanguages(m.Languages, data.BarWidth)
@@ -109,29 +97,6 @@ func renderCard(p catalog.Project, m meta.Metadata) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-// titleFontSize reduce el tamaño de letra del título según su largo, para
-// que quepa en una sola línea dentro del ancho de la tarjeta.
-func titleFontSize(title string) int {
-	switch n := len([]rune(title)); {
-	case n > 44:
-		return 36
-	case n > 30:
-		return 44
-	default:
-		return 54
-	}
-}
-
-func layoutDescription(desc string, startY, lineHeight float64) []descLine {
-	var lines []descLine
-	y := startY
-	for _, l := range wrapText(desc, 54, 3) {
-		lines = append(lines, descLine{Text: l, Y: y})
-		y += lineHeight
-	}
-	return lines
 }
 
 // truncate corta s a lo sumo a maxRunes runas, añadiendo "…" si se cortó.
