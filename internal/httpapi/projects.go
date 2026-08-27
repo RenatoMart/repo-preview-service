@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/RenatoMart/repo-preview-service/internal/catalog"
+	"github.com/RenatoMart/repo-preview-service/internal/meta"
 	"github.com/RenatoMart/repo-preview-service/internal/store"
 )
 
@@ -15,19 +16,20 @@ import (
 // resuelto (README, lenguajes, imagen). Antes del primer refresco los
 // campos dinámicos simplemente van vacíos.
 type projectDTO struct {
-	Slug          string             `json:"slug"`
-	Title         string             `json:"title"`
-	Category      string             `json:"category"`
-	Description   string             `json:"description"`
-	Tags          []string           `json:"tags"`
-	Accent        string             `json:"accent"`
-	RepoURL       string             `json:"repoUrl"`
-	LiveURL       *string            `json:"liveUrl"`
-	ReadmeHTML    string             `json:"readmeHtml,omitempty"`
-	Languages     map[string]float64 `json:"languages,omitempty"`
-	PushedAt      *time.Time         `json:"pushedAt,omitempty"`
-	PreviewURL    string             `json:"previewUrl"`
-	PreviewSource string             `json:"previewSource,omitempty"`
+	Slug          string                `json:"slug"`
+	Title         string                `json:"title"`
+	Category      string                `json:"category"`
+	Description   string                `json:"description"`
+	Tags          []string              `json:"tags"`
+	Accent        string                `json:"accent"`
+	RepoURL       string                `json:"repoUrl"`
+	LiveURL       *string               `json:"liveUrl"`
+	ReadmeHTML    string                `json:"readmeHtml,omitempty"`
+	Languages     map[string]float64    `json:"languages,omitempty"`
+	PushedAt      *time.Time            `json:"pushedAt,omitempty"`
+	PreviewURL    string                `json:"previewUrl"`
+	PreviewSource string                `json:"previewSource,omitempty"`
+	Images        []meta.ImageCandidate `json:"images,omitempty"`
 }
 
 func toDTO(p catalog.Project, e store.Entry, hasEntry bool) projectDTO {
@@ -53,6 +55,7 @@ func toDTO(p catalog.Project, e store.Entry, hasEntry bool) projectDTO {
 			dto.PushedAt = &t
 		}
 		dto.PreviewSource = e.Preview.Source
+		dto.Images = e.Meta.Images
 	}
 	return dto
 }

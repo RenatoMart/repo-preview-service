@@ -17,8 +17,8 @@ import (
 // ImageCandidate es una imagen encontrada en un README, con su URL ya
 // resuelta a una dirección absoluta.
 type ImageCandidate struct {
-	URL string
-	Alt string
+	URL string `json:"url"`
+	Alt string `json:"alt"`
 }
 
 var mdRenderer = goldmark.New(goldmark.WithExtensions(extension.GFM))
