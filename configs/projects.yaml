@@ -124,3 +124,16 @@
     sin pisarse los cambios. Resuelve las condiciones de carrera combinando
     locks distribuidos (Redis) con control de concurrencia optimista en
     PostgreSQL.
+
+- slug: traffic-light-control
+  repo: RenatoMart/traffic-light-control
+  title: "Control de Semáforos — Visión Computacional"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#dc2626"
+  tags: ["Python", "OpenCV", "YOLOv3", "SORT", "Tkinter"]
+  description: >-
+    Control de semáforos adaptativo que cuenta vehículos en tiempo real con
+    YOLOv3 (detección) y SORT (tracking) sobre videos de los cuatro accesos
+    a una intersección, y ajusta el tiempo en verde de cada semáforo según
+    el tráfico detectado.
