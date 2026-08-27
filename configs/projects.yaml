@@ -97,3 +97,30 @@
     Sistema de escritorio para generar certificados automáticamente a partir
     de archivos Excel. Interfaz gráfica para carga de datos, previsualización
     de diseños y exportación por lotes.
+
+- slug: repo-preview-service
+  repo: RenatoMart/repo-preview-service
+  title: "Repo Preview Service — API de Previews"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#0891b2"
+  tags: ["Go", "REST API", "chromedp", "GitHub Actions", "Cloud Run"]
+  description: >-
+    API en Go que sirve las previsualizaciones (README, lenguajes, imagen)
+    de este mismo portafolio: cascada de fuentes hasta captura real vía
+    GitHub Actions o tarjeta SVG generada, servida sin empaquetar un
+    navegador para poder correr en un free tier serverless.
+
+- slug: shiftsync
+  repo: RenatoMart/ShiftSync
+  title: "ShiftSync — Backend en Tiempo Real"
+  category: "Proyectos Personales"
+  live: ""
+  accent: "#059669"
+  tags: ["NestJS", "WebSockets", "PostgreSQL", "Prisma", "Redis", "Docker"]
+  description: >-
+    Backend en tiempo real con NestJS y WebSockets donde varios
+    administradores reubican empleados en el plano de una oficina a la vez,
+    sin pisarse los cambios. Resuelve las condiciones de carrera combinando
+    locks distribuidos (Redis) con control de concurrencia optimista en
+    PostgreSQL.
