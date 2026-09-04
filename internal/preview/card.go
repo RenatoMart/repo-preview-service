@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"math"
 	"sort"
 	"strings"
 
@@ -45,13 +46,23 @@ const (
 )
 
 type langSlice struct {
-	Name       string
-	Percent    float64
-	Color      string
-	Width      float64 // en px, dentro de la barra
-	X          float64 // offset en px, dentro de la barra
-	LegendX    float64 // offset en px, dentro de la fila de leyenda
-	LegendText string  // "Python 87%"
+	Name         string
+	Percent      float64
+	Color        string
+	LegendText   string // "Python 87%"
+	ArcDashArray string // "arco resto-de-circunferencia", para stroke-dasharray
+	ArcOffset    float64
+}
+
+// langChip es una fila de leyenda (punto de color + texto) ya posicionada
+// en la columna a la izquierda del anillo de lenguajes.
+type langChip struct {
+	Text  string
+	Color string
+	DotCX float64
+	DotCY float64
+	TextX float64
+	TextY float64
 }
 
 type tagPill struct {
@@ -61,14 +72,15 @@ type tagPill struct {
 }
 
 type cardData struct {
-	Width, Height int
-	Accent        string
-	Title         string
-	Description   string
-	Langs         []langSlice
-	BarX, BarY    float64
-	BarWidth      float64
-	LegendY       float64
+	Width, Height               int
+	Accent                      string
+	Title                       string
+	Description                 string
+	Langs                       []langSlice
+	Legend                      []langChip
+	RingCX, RingCY              float64
+	RingR, RingStroke           float64
+	TopLangName, TopLangPercent string
 }
 
 var cardTemplate = template.Must(template.New("card").Parse(cardSVGTemplate))
@@ -79,18 +91,40 @@ func renderCard(p catalog.Project, m meta.Metadata) (string, error) {
 		accent = "#2563eb"
 	}
 
+	const (
+		ringCX     = 430
+		ringCY     = 340
+		ringR      = 135
+		ringStroke = 26
+
+		legendX       = 650
+		legendRowH    = 38
+		legendMaxRows = 5
+	)
+
 	data := cardData{
 		Width:       cardWidth,
 		Height:      cardHeight,
 		Accent:      accent,
 		Title:       truncate(p.Title, 60),
 		Description: p.Description,
-		BarX:        64,
-		BarY:        300,
-		BarWidth:    float64(cardWidth) - 128,
+		RingCX:      ringCX,
+		RingCY:      ringCY,
+		RingR:       ringR,
+		RingStroke:  ringStroke,
 	}
-	data.LegendY = data.BarY + 40
-	data.Langs = layoutLanguages(m.Languages, data.BarWidth)
+	data.Langs = layoutLanguages(m.Languages, ringR)
+
+	rows := len(data.Langs)
+	if rows > legendMaxRows {
+		rows = legendMaxRows
+	}
+	legendStartY := ringCY - float64(rows-1)*legendRowH/2
+	data.Legend = layoutLanguageLegend(data.Langs, legendX, legendStartY, legendRowH, legendMaxRows)
+	if len(data.Langs) > 0 {
+		data.TopLangName = data.Langs[0].Name
+		data.TopLangPercent = fmt.Sprintf("%.0f%%", data.Langs[0].Percent)
+	}
 
 	var buf bytes.Buffer
 	if err := cardTemplate.Execute(&buf, data); err != nil {
@@ -175,8 +209,9 @@ func layoutTags(tags []string, startX, maxWidth float64) []tagPill {
 
 // layoutLanguages ordena los lenguajes por porcentaje descendente, se
 // queda con los 5 más relevantes agrupando el resto en "Otros", y calcula
-// la posición de cada segmento dentro de la barra.
-func layoutLanguages(langs map[string]float64, barWidth float64) []langSlice {
+// el arco (dasharray/offset) de cada uno dentro del anillo de radio
+// ringRadius, listo para dibujarse con stroke-dasharray.
+func layoutLanguages(langs map[string]float64, ringRadius float64) []langSlice {
 	if len(langs) == 0 {
 		return nil
 	}
@@ -205,27 +240,52 @@ func layoutLanguages(langs map[string]float64, barWidth float64) []langSlice {
 		top = append(top, kv{"Otros", otherPct})
 	}
 
+	circumference := 2 * math.Pi * ringRadius
 	slices := make([]langSlice, 0, len(top))
-	x, legendX := 0.0, 0.0
+	cumulative := 0.0
 	for _, e := range top {
-		w := barWidth * e.pct / 100
 		color := langColor(e.name)
 		if e.name == "Otros" {
 			color = defaultLangColor
 		}
-		legendText := fmt.Sprintf("%s %.0f%%", e.name, e.pct)
+		arcLen := circumference * e.pct / 100
 
 		slices = append(slices, langSlice{
-			Name:       e.name,
-			Percent:    e.pct,
-			Color:      color,
-			X:          x,
-			Width:      w,
-			LegendX:    legendX,
-			LegendText: legendText,
+			Name:         e.name,
+			Percent:      e.pct,
+			Color:        color,
+			LegendText:   fmt.Sprintf("%s %.0f%%", e.name, e.pct),
+			ArcDashArray: fmt.Sprintf("%.2f %.2f", arcLen, circumference),
+			ArcOffset:    -cumulative,
 		})
-		x += w
-		legendX += float64(len([]rune(legendText)))*7.5 + 36 // dot + texto + espacio al siguiente
+		cumulative += arcLen
 	}
 	return slices
+}
+
+// layoutLanguageLegend coloca hasta maxRows lenguajes en una columna
+// (punto de color + "Nombre 87%"); el resto se descarta en vez de
+// apretarlos, igual que layoutTags.
+func layoutLanguageLegend(langs []langSlice, startX, startY, rowHeight float64, maxRows int) []langChip {
+	const (
+		dotGap = 10
+		dotR   = 5
+	)
+
+	var chips []langChip
+	for i, l := range langs {
+		if i >= maxRows {
+			break
+		}
+		y := startY + float64(i)*rowHeight
+		chips = append(chips, langChip{
+			Text:  l.LegendText,
+			Color: l.Color,
+			DotCX: startX + dotR,
+			DotCY: y,
+			TextX: startX + dotR*2 + dotGap,
+			TextY: y + 5,
+		})
+	}
+	return chips
 }

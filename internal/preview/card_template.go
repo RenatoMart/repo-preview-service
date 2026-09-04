@@ -19,22 +19,34 @@ const cardSVGTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width
   <rect width="{{.Width}}" height="{{.Height}}" fill="url(#bg)"/>
   <rect x="0" y="0" width="{{.Width}}" height="6" fill="{{.Accent}}"/>
 
-  <!-- Manchas decorativas con el color de acento: la tarjeta ya no
-       repite título/descripción/tags como texto visible (eso lo
-       muestra el frontend justo debajo de la imagen); esto le da
-       identidad visual sin duplicar información. -->
-  <circle cx="1020" cy="150" r="240" fill="{{.Accent}}" fill-opacity="0.07"/>
-  <circle cx="140" cy="520" r="160" fill="{{.Accent}}" fill-opacity="0.05"/>
+  <!-- La tarjeta no repite título/descripción/tags como texto visible
+       (eso lo muestra el frontend justo debajo de la imagen); en su
+       lugar construye identidad visual con la marca del proyecto y la
+       proporción real de lenguajes del repo (anillo + leyenda). -->
+  <circle cx="1060" cy="600" r="200" fill="{{.Accent}}" fill-opacity="0.05"/>
+  <circle cx="60" cy="20" r="110" fill="{{.Accent}}" fill-opacity="0.05"/>
+
+  <!-- Marca: distintivo "de código" con el color de acento del proyecto. -->
+  <rect x="64" y="64" width="92" height="92" rx="22" fill="{{.Accent}}" fill-opacity="0.12" stroke="{{.Accent}}" stroke-opacity="0.35" stroke-width="1.5"/>
+  <text x="110" y="123" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="34" font-weight="600" fill="{{.Accent}}">&lt;/&gt;</text>
 
   {{if .Langs}}
-  <rect x="{{.BarX}}" y="{{.BarY}}" width="{{.BarWidth}}" height="16" rx="8" fill="#e2e8f0"/>
-  {{range .Langs}}<rect x="{{$.BarX}}" y="{{$.BarY}}" width="{{.Width}}" height="16"
-        transform="translate({{.X}},0)" fill="{{.Color}}"/>
+  <circle cx="{{.RingCX}}" cy="{{.RingCY}}" r="{{.RingR}}" fill="none" stroke="#e2e8f0" stroke-width="{{.RingStroke}}"/>
+  <g transform="rotate(-90 {{.RingCX}} {{.RingCY}})">
+    {{range .Langs}}<circle cx="{{$.RingCX}}" cy="{{$.RingCY}}" r="{{$.RingR}}" fill="none" stroke="{{.Color}}"
+        stroke-width="{{$.RingStroke}}" stroke-dasharray="{{.ArcDashArray}}" stroke-dashoffset="{{.ArcOffset}}"/>
+    {{end}}
+  </g>
+  <text x="{{.RingCX}}" y="{{.RingCY}}" dy="-4" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="26" font-weight="700" fill="#1e293b">{{.TopLangName}}</text>
+  <text x="{{.RingCX}}" y="{{.RingCY}}" dy="24" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" fill="#64748b">{{.TopLangPercent}}</text>
+
+  {{range .Legend}}<circle cx="{{.DotCX}}" cy="{{.DotCY}}" r="5" fill="{{.Color}}"/>
+  <text x="{{.TextX}}" y="{{.TextY}}" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="500" fill="#334155">{{.Text}}</text>
   {{end}}
-  {{range .Langs}}<circle cx="{{$.BarX}}" cy="{{$.LegendY}}" r="5" transform="translate({{.LegendX}},0)" fill="{{.Color}}"/>
-  <text x="{{$.BarX}}" y="{{$.LegendY}}" dx="14" dy="5" transform="translate({{.LegendX}},0)"
-        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" fill="#334155">{{.LegendText}}</text>
-  {{end}}
+  {{else}}
+  <!-- Sin datos de lenguaje (repo vacío o metadata no disponible): una
+       marca fantasma centrada evita que la tarjeta quede casi en blanco. -->
+  <text x="{{.RingCX}}" y="{{.RingCY}}" dy="50" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="150" font-weight="600" fill="{{.Accent}}" fill-opacity="0.06">&lt;/&gt;</text>
   {{end}}
 </svg>
 `
