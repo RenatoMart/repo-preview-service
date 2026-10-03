@@ -47,6 +47,27 @@ func run() error {
 		return err
 	}
 
+	// Presupuesto de la API de GitHub en un arranque en frío (sin caché):
+	// cada proyecto normal gasta 2 llamadas (repo + lenguajes); el README va
+	// por raw.githubusercontent.com y no cuenta. Sin token el límite es 60/h.
+	apiCalls, free := 0, 0
+	for _, p := range cat.All() {
+		if p.NoAPI {
+			free++
+		} else {
+			apiCalls += 2
+		}
+	}
+	limit := 60
+	if cfg.GitHubToken != "" {
+		limit = 5000
+	}
+	slog.Info("presupuesto de la API de GitHub en arranque en frío",
+		"llamadas", apiCalls, "proyectos_sin_api", free, "limite_por_hora", limit)
+	if cfg.GitHubToken == "" && apiCalls > limit/3 {
+		slog.Warn("sin GITHUB_TOKEN: pocos reinicios seguidos agotan la cuota; configura el token")
+	}
+
 	gh := ghclient.New(cfg.GitHubToken)
 	metaSvc := meta.NewService(gh)
 

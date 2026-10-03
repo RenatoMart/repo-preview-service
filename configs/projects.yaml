@@ -13,6 +13,11 @@
 # accent:      color de acento de la tarjeta generada.
 # tags:        tecnologías mostradas como píldoras.
 # description: texto corto mostrado bajo el título.
+# no_api:      (opcional, por defecto false) true = no gastar la cuota de la
+#              API de GitHub en este proyecto. Se pierden la barra de lenguajes
+#              y "actualizado hace…" en el frontend; las imágenes siguen
+#              saliendo de fuentes gratuitas. Cada proyecto normal gasta 2
+#              llamadas al arrancar en frío (límite sin token: 60/hora).
 
 - slug: ing-agroindustrial
   repo: RenatoMart/ing-agroindustrial

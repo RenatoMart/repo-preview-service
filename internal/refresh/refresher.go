@@ -68,9 +68,21 @@ func (r *Refresher) Start(ctx context.Context) {
 	}()
 }
 
+// enqueueAll encola todos los proyectos, pero primero los que todavía no
+// tienen nada guardado: si la cuota de GitHub se agota a mitad del ciclo,
+// lo que queda sin refrescar son proyectos que ya tienen datos, no los que
+// aparecerían vacíos.
 func (r *Refresher) enqueueAll() {
+	var missing, known []string
 	for _, p := range r.catalog.All() {
-		r.Enqueue(p.Slug)
+		if _, ok := r.store.Get(p.Slug); ok {
+			known = append(known, p.Slug)
+		} else {
+			missing = append(missing, p.Slug)
+		}
+	}
+	for _, slug := range append(missing, known...) {
+		r.Enqueue(slug)
 	}
 }
 
@@ -103,9 +115,15 @@ func (r *Refresher) refreshOne(ctx context.Context, slug string) {
 		return
 	}
 
+	if p.NoAPI {
+		r.refreshWithoutAPI(ctx, p)
+		return
+	}
+
 	info, err := r.meta.RepoInfo(ctx, p)
 	if err != nil {
 		slog.ErrorContext(ctx, "refresh: repo info", "slug", slug, "err", err)
+		r.storeWithoutGitHub(ctx, p)
 		return
 	}
 
@@ -141,6 +159,7 @@ func (r *Refresher) refreshOne(ctx context.Context, slug string) {
 	md, err := r.meta.Fetch(ctx, p, info)
 	if err != nil {
 		slog.ErrorContext(ctx, "refresh: fetch metadata", "slug", slug, "err", err)
+		r.storeWithoutGitHub(ctx, p)
 		return
 	}
 
@@ -157,4 +176,49 @@ func (r *Refresher) refreshOne(ctx context.Context, slug string) {
 	}
 
 	slog.InfoContext(ctx, "refresh: proyecto actualizado", "slug", slug, "previewSource", img.Source)
+}
+
+// storeWithoutGitHub guarda lo que se pueda resolver sin la API de GitHub
+// cuando esta falla (típicamente el límite de peticiones) y todavía no hay
+// nada guardado para el proyecto: la captura real viene de jsDelivr y la
+// tarjeta generada es local, así que el portafolio no se queda sin imágenes
+// mientras dura el límite. La entrada queda con PushedAt vacío, lo que hace
+// que el siguiente ciclo haga el refresco completo en cuanto GitHub responda.
+// Si ya había una entrada (de un refresco anterior), no se toca.
+func (r *Refresher) storeWithoutGitHub(ctx context.Context, p catalog.Project) {
+	if _, ok := r.store.Get(p.Slug); ok {
+		return
+	}
+	img, err := r.resolver.Resolve(ctx, p, meta.Metadata{})
+	if err != nil {
+		slog.ErrorContext(ctx, "refresh: preview sin GitHub", "slug", p.Slug, "err", err)
+		return
+	}
+	entry := store.Entry{Project: p, Preview: img, UpdatedAt: time.Now()}
+	if err := r.store.Set(p.Slug, entry); err != nil {
+		slog.ErrorContext(ctx, "refresh: guardando entry", "slug", p.Slug, "err", err)
+		return
+	}
+	slog.WarnContext(ctx, "refresh: preview provisional sin GitHub",
+		"slug", p.Slug, "previewSource", img.Source)
+}
+
+// refreshWithoutAPI refresca un proyecto con no_api: nunca consulta la API
+// de GitHub. La metadata sale solo del README crudo (gratis) y se reevalúa
+// en cada ciclo, porque sin pushed_at no hay forma barata de saber si algo
+// cambió; leer raw.githubusercontent.com no gasta cuota.
+func (r *Refresher) refreshWithoutAPI(ctx context.Context, p catalog.Project) {
+	md := r.meta.FetchFree(ctx, p)
+	img, err := r.resolver.Resolve(ctx, p, md)
+	if err != nil {
+		slog.ErrorContext(ctx, "refresh: preview sin API", "slug", p.Slug, "err", err)
+		return
+	}
+	entry := store.Entry{Project: p, Meta: md, Preview: img, UpdatedAt: time.Now()}
+	if err := r.store.Set(p.Slug, entry); err != nil {
+		slog.ErrorContext(ctx, "refresh: guardando entry", "slug", p.Slug, "err", err)
+		return
+	}
+	slog.InfoContext(ctx, "refresh: proyecto actualizado sin API", "slug", p.Slug,
+		"previewSource", img.Source)
 }

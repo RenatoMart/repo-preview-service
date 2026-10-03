@@ -27,6 +27,12 @@ type Project struct {
 	Accent      string   `yaml:"accent"`
 	Tags        []string `yaml:"tags"`
 	Description string   `yaml:"description"`
+	// NoAPI evita por completo la API de GitHub para este proyecto (no se
+	// consulta pushed_at ni lenguajes): solo se usan fuentes gratuitas
+	// (captura, imagen social, README vía raw.githubusercontent.com y la
+	// tarjeta generada). El precio es que el frontend no recibe lenguajes
+	// ni fecha del último push de ese proyecto.
+	NoAPI bool `yaml:"no_api"`
 }
 
 // Owner devuelve la parte "owner" de Repo.

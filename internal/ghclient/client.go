@@ -5,7 +5,9 @@ package ghclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -15,7 +17,8 @@ import (
 // Client es un wrapper de alto nivel sobre go-github con los pocos
 // métodos que este servicio necesita.
 type Client struct {
-	gh *github.Client
+	gh  *github.Client
+	raw *http.Client
 }
 
 // New crea un Client. Si token está vacío, las peticiones se hacen sin
@@ -31,7 +34,7 @@ func New(token string) *Client {
 		gh = gh.WithAuthToken(token)
 	}
 
-	return &Client{gh: gh}
+	return &Client{gh: gh, raw: &http.Client{Timeout: 15 * time.Second}}
 }
 
 // RepoInfo son los campos del repositorio que le importan al servicio.
@@ -77,6 +80,41 @@ func (c *Client) Readme(ctx context.Context, owner, name string) (string, error)
 		return "", fmt.Errorf("ghclient: decodificando readme %s/%s: %w", owner, name, err)
 	}
 	return raw, nil
+}
+
+// ErrRawNotFound indica que el README no existe con ningún nombre habitual
+// en la rama indicada.
+var ErrRawNotFound = errors.New("ghclient: README no encontrado en raw")
+
+// RawReadme descarga el README desde raw.githubusercontent.com. Ese host
+// no cuenta contra el límite de 60 peticiones/hora de la API, así que es
+// la forma barata de leer el README de un repo público. Prueba los nombres
+// más habituales; si ninguno existe devuelve ErrRawNotFound y el llamador
+// decide si vale la pena gastar una llamada a la API.
+func (c *Client) RawReadme(ctx context.Context, owner, name, branch string) (string, error) {
+	for _, file := range []string{"README.md", "readme.md", "Readme.md", "README.MD"} {
+		url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", owner, name, branch, file)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return "", err
+		}
+		resp, err := c.raw.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("ghclient: GET %s: %w", url, err)
+		}
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		resp.Body.Close()
+		switch {
+		case resp.StatusCode == http.StatusNotFound:
+			continue
+		case resp.StatusCode != http.StatusOK:
+			return "", fmt.Errorf("ghclient: GET %s: status %d", url, resp.StatusCode)
+		case readErr != nil:
+			return "", readErr
+		}
+		return string(body), nil
+	}
+	return "", ErrRawNotFound
 }
 
 // Languages trae los lenguajes del repo como porcentajes (0-100), sobre

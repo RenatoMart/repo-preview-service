@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/go-github/v75/github"
@@ -49,9 +50,9 @@ func (s *Service) RepoInfo(ctx context.Context, p catalog.Project) (ghclient.Rep
 // cara de la actualización: solo debe llamarse cuando RepoInfo indica que
 // pushed_at cambió respecto a lo que ya se tenía guardado.
 func (s *Service) Fetch(ctx context.Context, p catalog.Project, info ghclient.RepoInfo) (Metadata, error) {
-	raw, err := s.gh.Readme(ctx, p.Owner(), p.Name())
-	if err != nil && !isNotFound(err) {
-		return Metadata{}, fmt.Errorf("meta: readme de %s: %w", p.Repo, err)
+	raw, err := s.readme(ctx, p, info.DefaultBranch)
+	if err != nil {
+		return Metadata{}, err
 	}
 
 	html, renderErr := RenderHTML(raw)
@@ -73,6 +74,47 @@ func (s *Service) Fetch(ctx context.Context, p catalog.Project, info ghclient.Re
 		DefaultBranch: info.DefaultBranch,
 		Description:   info.Description,
 	}, nil
+}
+
+// readme lee el README sin gastar cuota de la API: primero desde
+// raw.githubusercontent.com; solo si ahí no se encuentra con ningún nombre
+// habitual se recurre a la API (que además resuelve nombres raros y
+// redirecciones). Un repo sin README no es un error.
+func (s *Service) readme(ctx context.Context, p catalog.Project, branch string) (string, error) {
+	raw, err := s.gh.RawReadme(ctx, p.Owner(), p.Name(), branch)
+	if err == nil {
+		return raw, nil
+	}
+	if !errors.Is(err, ghclient.ErrRawNotFound) {
+		slog.WarnContext(ctx, "meta: README crudo falló, se usa la API", "slug", p.Slug, "err", err)
+	}
+	raw, err = s.gh.Readme(ctx, p.Owner(), p.Name())
+	if err != nil && !isNotFound(err) {
+		return "", fmt.Errorf("meta: readme de %s: %w", p.Repo, err)
+	}
+	return raw, nil
+}
+
+// FetchFree arma la metadata de un proyecto con no_api sin tocar la API de
+// GitHub: solo las imágenes del README (vía raw). No hay lenguajes ni
+// pushed_at. Prueba main y luego master como rama por defecto.
+func (s *Service) FetchFree(ctx context.Context, p catalog.Project) Metadata {
+	for _, branch := range []string{"main", "master"} {
+		raw, err := s.gh.RawReadme(ctx, p.Owner(), p.Name(), branch)
+		if err != nil {
+			continue
+		}
+		html, renderErr := RenderHTML(raw)
+		if renderErr != nil {
+			html = ""
+		}
+		return Metadata{
+			ReadmeHTML:    html,
+			Images:        ExtractImages(raw, p.Owner(), p.Name(), branch),
+			DefaultBranch: branch,
+		}
+	}
+	return Metadata{}
 }
 
 // isNotFound reporta si err es un 404 de la API de GitHub. Un repo sin
