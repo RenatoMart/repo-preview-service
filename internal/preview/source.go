@@ -26,6 +26,11 @@ type Image struct {
 	Bytes       []byte
 	ContentType string
 	Source      string // nombre de la fuente que la produjo (screenshot/social/readme/card)
+	// Degraded es true cuando una fuente de mayor prioridad falló por un
+	// error real (red, timeout) y se cayó a una de menor calidad. A
+	// diferencia de ErrNotApplicable, es un resultado transitorio: el
+	// refresco debe reintentarlo sin esperar a un push nuevo en el repo.
+	Degraded bool
 }
 
 // Source es una fuente de imagen de previsualización.
@@ -50,13 +55,16 @@ func NewResolver(sources ...Source) *Resolver {
 // Resolve recorre las fuentes en orden y devuelve la primera imagen
 // disponible.
 func (r *Resolver) Resolve(ctx context.Context, p catalog.Project, m meta.Metadata) (Image, error) {
+	failed := false
 	for _, s := range r.sources {
 		img, err := s.Render(ctx, p, m)
 		if err == nil {
 			img.Source = s.Name()
+			img.Degraded = failed
 			return img, nil
 		}
 		if !errors.Is(err, ErrNotApplicable) {
+			failed = true
 			slog.WarnContext(ctx, "preview: fuente falló, se prueba la siguiente",
 				"slug", p.Slug, "source", s.Name(), "err", err)
 		}

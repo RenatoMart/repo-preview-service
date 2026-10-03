@@ -33,6 +33,7 @@ type indexRecord struct {
 	Meta               meta.Metadata   `json:"meta"`
 	PreviewSource      string          `json:"previewSource"`
 	PreviewContentType string          `json:"previewContentType"`
+	PreviewDegraded    bool            `json:"previewDegraded,omitempty"`
 	UpdatedAt          time.Time       `json:"updatedAt"`
 }
 
@@ -88,6 +89,7 @@ func (s *Store) Load() error {
 				Bytes:       blob,
 				ContentType: r.PreviewContentType,
 				Source:      r.PreviewSource,
+				Degraded:    r.PreviewDegraded,
 			},
 			UpdatedAt: r.UpdatedAt,
 		}
@@ -150,6 +152,7 @@ func (s *Store) snapshotRecordsLocked() map[string]indexRecord {
 			Meta:               e.Meta,
 			PreviewSource:      e.Preview.Source,
 			PreviewContentType: e.Preview.ContentType,
+			PreviewDegraded:    e.Preview.Degraded,
 			UpdatedAt:          e.UpdatedAt,
 		}
 	}

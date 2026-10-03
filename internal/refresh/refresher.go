@@ -111,9 +111,30 @@ func (r *Refresher) refreshOne(ctx context.Context, slug string) {
 
 	if existing, hasExisting := r.store.Get(slug); hasExisting &&
 		!existing.Meta.PushedAt.IsZero() && existing.Meta.PushedAt.Equal(info.PushedAt) {
-		// Nada cambió desde el último refresco. Gracias al ETag transport,
-		// la llamada de arriba probablemente fue un 304 gratis, así que
-		// aquí no hace falta pedir README/lenguajes/preview de nuevo.
+		if !existing.Preview.Degraded {
+			// Nada cambió desde el último refresco. Gracias al ETag
+			// transport, la llamada de arriba probablemente fue un 304
+			// gratis, así que aquí no hace falta pedir README/lenguajes/
+			// preview de nuevo.
+			return
+		}
+		// El preview cayó a un fallback por un fallo transitorio (p. ej.
+		// timeout del CDN). El repo no cambió, pero no hay que esperar a
+		// un push: se reintenta solo la cascada de imagen, reutilizando la
+		// metadata ya guardada (sin gastar cuota de GitHub).
+		img, err := r.resolver.Resolve(ctx, p, existing.Meta)
+		if err != nil {
+			slog.ErrorContext(ctx, "refresh: reintentando preview degradado", "slug", slug, "err", err)
+			return
+		}
+		existing.Preview = img
+		existing.UpdatedAt = time.Now()
+		if err := r.store.Set(slug, existing); err != nil {
+			slog.ErrorContext(ctx, "refresh: guardando entry", "slug", slug, "err", err)
+			return
+		}
+		slog.InfoContext(ctx, "refresh: preview reintentado", "slug", slug,
+			"previewSource", img.Source, "degraded", img.Degraded)
 		return
 	}
 

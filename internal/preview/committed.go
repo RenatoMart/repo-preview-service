@@ -2,6 +2,7 @@ package preview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,7 +32,10 @@ type CommittedScreenshotSource struct {
 // dónde cmd/shooter commitea las capturas (ver internal/config).
 func NewCommittedScreenshotSource(repo, branch string) *CommittedScreenshotSource {
 	return &CommittedScreenshotSource{
-		client: &http.Client{Timeout: 5 * time.Second},
+		// La captura pesa cientos de KB y jsDelivr puede tardar varios
+		// segundos en un edge frío: el Timeout cubre la petición completa
+		// (incluida la descarga), así que 5s cortaba capturas válidas.
+		client: &http.Client{Timeout: 20 * time.Second},
 		repo:   repo,
 		branch: branch,
 	}
@@ -44,6 +48,17 @@ func (s *CommittedScreenshotSource) Render(ctx context.Context, p catalog.Projec
 		return Image{}, ErrNotApplicable
 	}
 
+	// Un reintento ante errores transitorios (timeout, 5xx): una caída
+	// puntual del CDN no debería degradar el preview.
+	img, err := s.fetch(ctx, p)
+	if err != nil && !errors.Is(err, ErrNotApplicable) && ctx.Err() == nil {
+		time.Sleep(1500 * time.Millisecond)
+		return s.fetch(ctx, p)
+	}
+	return img, err
+}
+
+func (s *CommittedScreenshotSource) fetch(ctx context.Context, p catalog.Project) (Image, error) {
 	url := fmt.Sprintf("https://cdn.jsdelivr.net/gh/%s@%s/data/screenshots/%s.png", s.repo, s.branch, p.Slug)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
