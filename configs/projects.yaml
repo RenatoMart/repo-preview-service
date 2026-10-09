@@ -55,17 +55,18 @@
     con Next.js y TypeScript, desplegada en Vercel como herramienta de
     seguimiento para voluntarios.
 
-- slug: sistema-almacen
-  repo: RenatoMart/SistemaAlmacen
-  title: "Sistema de Almacén"
+- slug: sistema-farmacia-escritorio
+  repo: RenatoMart/sistema-farmacia-escritorio
+  title: "Farmacia — Sistema de Escritorio"
   category: "Proyectos Personales"
   live: ""
-  accent: "#0891b2"
-  tags: ["Python", "GUI", "JSON", "Inventario"]
+  accent: "#059669"
+  tags: ["Python", "Tkinter", "JSON", "Inventario", "PDF"]
   description: >-
-    Aplicación de escritorio (GUI) en Python para gestión de inventario.
-    Registra entradas y salidas en archivos JSON, calcula el inventario
-    dinámicamente y genera reportes.
+    Aplicación de escritorio para llevar el inventario, las entradas, las
+    ventas y los reportes de una botica. Maneja unidades como en una farmacia
+    real (caja, blister, tableta), costo promedio, alertas de vencimiento,
+    usuarios con roles y reportes exportables a PDF.
 
 - slug: posture-corrector
   repo: RenatoMart/posture-corrector
